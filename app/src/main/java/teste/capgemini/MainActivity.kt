@@ -1,98 +1,57 @@
 package teste.capgemini
 
-import android.content.Context
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Base64
-import android.util.Log
 import android.webkit.JavascriptInterface
-import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
-    lateinit var mWebViewDemo:WebView
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-
-        mWebViewDemo = findViewById(R.id.webViewwbv) as WebView
-        val myJavaScriptInterface = ButtonClickJavascriptInterface(this@MainActivity)
-        mWebViewDemo.addJavascriptInterface(myJavaScriptInterface, "MyFunction")
-        mWebViewDemo.getSettings().setJavaScriptEnabled(true)
-
-        mWebViewDemo.loadUrl("file:///android_asset/mypage.html")
-
-
-    }
-
-    private var mWebView: WebView? = null
-
-    private fun doWebViewPrint() {
-        // Create a WebView object specifically for printing
-        val webView = webViewwbv
-        webView.webViewClient = object : WebViewClient() {
-
-            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = false
-
+        minha_webview.settings.javaScriptEnabled = true
+        minha_webview.addJavascriptInterface(JavaScriptInterface(), JAVASCRIPT)
+        minha_webview.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView, url: String) {
-
-                mWebView = null
+                if (url == BASE_URL) {
+                    injectJavaScriptFunction()
+                }
             }
         }
+        minha_webview.loadUrl(BASE_URL)
 
-        // Generate an HTML document on the fly:
-        val htmlDocument =
-            "<html>\n" +
-                    "<head>\n" +
-                    "<title>Page Title</title>\n" +
-                    "<style>\n" +
-                    "body {\n" +
-                    "  background-color: white;\n" +
-                    "  text-align: center;\n" +
-                    "  color: white;\n" +
-                    "  font-family: Arial, Helvetica, sans-serif;\n" +
-                    "}\n" +
-                    "\n" +
-                    ".button {\n" +
-                    "  background-color: #cc0000; /* Green */\n" +
-                    "  border: none;\n" +
-                    "  color: white;\n" +
-                    "  padding: 15px 32px;\n" +
-                    "  text-align: center;\n" +
-                    "  text-decoration: none;\n" +
-                    "  display: inline-block;\n" +
-                    "  font-size: 16px;\n" +
-                    "  margin: 4px 2px;\n" +
-                    "  cursor: pointer;\n" +
-                    "}\n" +
-                    "\n" +
-                    "</style>\n" +
-                    "</head>\n" +
-                    "<body>\n" +
-                    "<textarea rows=\"4\" cols=\"50\" placeholder=\"Insira Aqui seu o texto para enviar para o nativo.\"></textarea>\n" +
-                    "<button class=\"button\">Enviar</button>\n" +
-                    "</body>\n" +
-                    "</html>\n"
-        webView.loadDataWithBaseURL(null, htmlDocument, "text/HTML", "UTF-8", null)
-
-        // Keep a reference to WebView object until you pass the PrintDocumentAdapter
-        // to the PrintManager
-        mWebView = webView
+        btOkNativo.setOnClickListener {
+                minha_webview.evaluateJavascript("javascript: " +
+                        "updateFromAndroid(\"" + editTextNativo.text + "\")", null)
+        }
     }
 
-    class ButtonClickJavascriptInterface internal constructor(c: Context) {
-        internal var mContext:Context
-        init{
-            mContext = c
-        }
+    override fun onDestroy() {
+        minha_webview.removeJavascriptInterface(JAVASCRIPT)
+        super.onDestroy()
+    }
+
+    private fun injectJavaScriptFunction() {
+        minha_webview.loadUrl("javascript: " +
+                "window.androidObj.textoparaandroid = function(message) { " +
+                JAVASCRIPT + ".textFromWeb(message) }")
+    }
+
+
+    private inner class JavaScriptInterface {
         @JavascriptInterface
-        fun onButtonClick(toast:String) {
-            Toast.makeText(mContext, toast, Toast.LENGTH_SHORT).show()
+        fun textFromWeb(fromWeb: String) {
+            txt_webfinal.text =  fromWeb
         }
     }
 
+    companion object {
+        private val JAVASCRIPT = "JAVASCRIPT"
+        private val BASE_URL = "file:///android_asset/webview.html"
+    }
 }
